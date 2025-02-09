@@ -8,7 +8,7 @@
 from pi5neo import Pi5Neo
 import time
 
-def rainbow_cycle(neo, delay=0.1):
+def rainbow_cycle(neo, delay=1.0):  # Increased delay to 1 second
     colors = [
         (255, 0, 0),  # Red
         (255, 127, 0),  # Orange
@@ -18,10 +18,26 @@ def rainbow_cycle(neo, delay=0.1):
         (75, 0, 130),  # Indigo
         (148, 0, 211)  # Violet
     ]
-    for color in colors:
+    
+    print("Starting rainbow cycle...")
+    for i, color in enumerate(colors):
+        print(f"Setting color {i+1}/7: RGB{color}")
         neo.fill_strip(*color)
         neo.update_strip()
         time.sleep(delay)
+        print(f"Color {i+1} displayed for {delay} seconds")
 
-neo = Pi5Neo('/dev/spidev0.0', 15, 800)
-rainbow_cycle(neo)
+print("Initializing LED strip...")
+try:
+    neo = Pi5Neo('/dev/spidev0.0', 15, 800)
+    print("LED strip initialized successfully")
+    print("Starting color sequence...")
+    rainbow_cycle(neo)
+    print("Color sequence completed")
+except Exception as e:
+    print(f"Error: {e}")
+    print("Please check:")
+    print("1. Is the LED strip connected to GPIO10 (MOSI)?")
+    print("2. Is the LED strip oriented correctly (check arrow direction)?")
+    print("3. Is the power supply connected and adequate?")
+    print("4. Are all ground connections secure?")

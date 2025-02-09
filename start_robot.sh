@@ -137,6 +137,32 @@ check_odrive() {
     fi
 }
 
+# Function to setup LED support
+setup_led() {
+    echo -e "${YELLOW}Setting up LED support...${NC}"
+    
+    # Enable SPI interface
+    if ! lsmod | grep -q "spi_bcm2835"; then
+        echo -e "${YELLOW}Enabling SPI interface...${NC}"
+        sudo raspi-config nonint do_spi 0
+    fi
+    
+    # Check if user is in spi group
+    if ! groups | grep -q "spi"; then
+        echo -e "${YELLOW}Adding user to spi group...${NC}"
+        sudo usermod -a -G spi $USER
+        echo -e "${YELLOW}Please log out and back in for group changes to take effect${NC}"
+    fi
+    
+    # Install Pi5Neo if not already installed
+    if ! pip list | grep -q "Pi5Neo"; then
+        echo -e "${YELLOW}Installing Pi5Neo package...${NC}"
+        pip install Pi5Neo
+    fi
+    
+    echo -e "${GREEN}LED support setup complete${NC}"
+}
+
 # Main setup process
 echo -e "${BLUE}Checking prerequisites...${NC}"
 check_dependencies
@@ -144,6 +170,7 @@ check_venv
 check_api_key
 check_microphone
 check_odrive
+setup_led
 
 # Start MQTT broker
 if ! pgrep mosquitto >/dev/null; then

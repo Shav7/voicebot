@@ -9,6 +9,7 @@ import wave
 import numpy as np
 import paho.mqtt.client as mqtt
 from openai import OpenAI
+from lib.led_feedback import LEDFeedback
 
 # OpenAI setup
 client = OpenAI()  # This will use OPENAI_API_KEY environment variable
@@ -34,6 +35,8 @@ class RobotSession:
         self.last_command_time = None
         self.timeout_seconds = 120  # Increased to 2 minutes
         self.warning_threshold = 30  # Warning when 30 seconds remaining
+        self.led = LEDFeedback()  # Initialize LED feedback
+        self.led.end()  # Start with LEDs off
     
     def start(self):
         self.active = True
@@ -44,6 +47,7 @@ class RobotSession:
         print("Say 'end session' or 'stop session' to stop")
         # Send initial stop command to ensure clean state
         mqtt_client.publish(MQTT_TOPIC, "stop")
+        self.led.active()  # Green when session is active
     
     def end(self):
         if self.active:
@@ -54,6 +58,7 @@ class RobotSession:
             print("Say 'start session' or 'begin session' to start a new session")
             # Send stop command when ending session
             mqtt_client.publish(MQTT_TOPIC, "stop")
+            self.led.end()  # Turn off LEDs when session ends
     
     def check_timeout(self):
         if self.active and self.last_command_time:
@@ -93,6 +98,7 @@ def process_command(text, session):
     if not session.active:
         if any(cmd in text for cmd in ["forward", "back", "left", "right", "stop", "halt"]):
             print("\n⚠️  No active session. Say 'start session' first!")
+            session.led.waiting()  # Blue light to indicate waiting for session start
         return False
     
     # Command mapping with more precise matching
@@ -122,6 +128,10 @@ def process_command(text, session):
                 print(f"\nExecuting command: {command}")
                 mqtt_client.publish(MQTT_TOPIC, command)
                 session.update_last_command_time()
+                if command == "stop":
+                    session.led.stopped()  # Red flash for stop
+                else:
+                    session.led.moving()  # White for movement
                 return True
     
     return False
@@ -167,6 +177,7 @@ def record_and_transcribe():
         # Initialize session
         session = RobotSession()
         print("\n⚠️  No active session. Say 'start session' first!")
+        session.led.waiting()  # Start with blue light (waiting for session)
         
         while True:
             # Check for session timeout
@@ -225,6 +236,8 @@ def record_and_transcribe():
         mqtt_client.publish(MQTT_TOPIC, "stop")
         mqtt_client.loop_stop()
         mqtt_client.disconnect()
+        if 'session' in locals():
+            session.led.end()  # Make sure LEDs are off
 
 if __name__ == "__main__":
     if not os.getenv("OPENAI_API_KEY"):
