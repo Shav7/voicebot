@@ -194,7 +194,7 @@ if command -v tmux >/dev/null 2>&1; then
 
     # Start drive node in first window
     echo -e "${YELLOW}Starting drive node...${NC}"
-    tmux send-keys -t robot_control "cd $(dirname $0) && python3 core/node_drive.py" C-m
+    tmux send-keys -t robot_control "cd $(dirname $0) && /home/holly/.venv/bin/python3 core/node_drive.py" C-m
     
     # Wait for drive node to initialize
     sleep 3
@@ -202,7 +202,7 @@ if command -v tmux >/dev/null 2>&1; then
     # Create window for voice control
     tmux split-window -h -t robot_control
     echo -e "${YELLOW}Starting voice control...${NC}"
-    tmux send-keys -t robot_control.1 "cd $(dirname $0) && python3 tests/test_transcription.py" C-m
+    tmux send-keys -t robot_control.1 "cd $(dirname $0) && /home/holly/.venv/bin/python3 tests/test_transcription.py" C-m
     
     echo -e "${GREEN}All components started successfully!${NC}"
     echo -e "${BLUE}=== Quick Guide ===${NC}"
@@ -216,10 +216,10 @@ if command -v tmux >/dev/null 2>&1; then
 else
     echo -e "${RED}tmux is not installed. Running in separate terminals...${NC}"
     echo -e "${YELLOW}Starting drive node...${NC}"
-    gnome-terminal -- bash -c "cd $(dirname $0) && python3 core/node_drive.py"
+    gnome-terminal -- bash -c "cd $(dirname $0) && /home/holly/.venv/bin/python3 core/node_drive.py"
     sleep 3
     echo -e "${YELLOW}Starting voice control...${NC}"
-    gnome-terminal -- bash -c "cd $(dirname $0) && python3 tests/test_transcription.py"
+    gnome-terminal -- bash -c "cd $(dirname $0) && /home/holly/.venv/bin/python3 tests/test_transcription.py"
     
     # Wait for Ctrl+C
     echo -e "${YELLOW}Press Ctrl+C to shutdown everything${NC}"
