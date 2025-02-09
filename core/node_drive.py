@@ -16,7 +16,7 @@ from lib.odrive_uart import ODriveUART
 MQTT_BROKER_ADDRESS = "localhost"
 MQTT_TOPIC = "robot/drive"
 LINEAR_SPEED = 0.2
-ANGULAR_SPEED = 1.2
+ANGULAR_SPEED = 0.6
 WHEEL_BASE = 0.4
 
 # Load motor directions from JSON
