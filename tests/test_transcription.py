@@ -10,6 +10,8 @@ import numpy as np
 import paho.mqtt.client as mqtt
 from openai import OpenAI
 from lib.led_feedback import LEDFeedback
+import subprocess
+import threading
 
 # OpenAI setup
 client = OpenAI()  # This will use OPENAI_API_KEY environment variable
@@ -81,41 +83,70 @@ class RobotSession:
         remaining = self.timeout_seconds
         print(f"\n⏰ Session time reset. {remaining} seconds until timeout")
 
+def play_siren():
+    """Play the police siren sound"""
+    siren_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recordings", "police.wav")
+    try:
+        subprocess.run(["aplay", "-D", "plughw:2,0", siren_path])
+    except Exception as e:
+        print(f"Error playing siren: {e}")
+
+def play_siren_loop():
+    """Play the police siren sound in a loop"""
+    siren_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recordings", "police.wav")
+    start_time = time.time()
+    duration = 5  # Match LED duration
+    
+    while time.time() - start_time < duration:
+        try:
+            subprocess.run(["aplay", "-D", "plughw:2,0", siren_path], check=True)
+        except Exception as e:
+            print(f"Error playing siren: {e}")
+            break
+
 def process_command(text, session):
     """Process transcribed text for commands"""
     text = text.lower().strip()
     print(f"\nProcessing text: {text}")
     
     # Session control commands
-    if "start session" in text or "begin session" in text:
+    if "start" in text:
         session.start()
         return True
-    elif "end session" in text or "stop session" in text:
+    elif "end" in text:
         session.end()
         return True
     
     # Only process movement commands if session is active
     if not session.active:
-        if any(cmd in text for cmd in ["forward", "back", "left", "right", "stop", "halt"]):
-            print("\n⚠️  No active session. Say 'start session' first!")
+        if any(cmd in text for cmd in ["go", "back up", "left", "right", "stop", "halt", "emergency"]):
+            print("\n⚠️  No active session. Say 'start' first!")
             session.led.waiting()  # Blue light to indicate waiting for session start
         return False
     
+    # Check for emergency command first
+    if "emergency" in text:
+        print("\n🚨 EMERGENCY MODE ACTIVATED 🚨")
+        mqtt_client.publish(MQTT_TOPIC, "stop")  # Stop the robot
+        
+        # Start siren in a separate thread
+        siren_thread = threading.Thread(target=play_siren_loop)
+        siren_thread.start()
+        
+        # Flash LEDs
+        session.led.emergency()
+        
+        session.update_last_command_time()
+        return True
+    
     # Command mapping with more precise matching
     commands = {
-        "go forward": "forward",
-        "forward": "forward",
-        "move forward": "forward",
-        "stop moving": "stop",
-        "stop": "stop",
-        "halt": "stop",
+        "go": "forward",
+        "back up": "back",
         "turn left": "left",
-        "go left": "left",
         "turn right": "right",
-        "go right": "right",
-        "go back": "back",
-        "backwards": "back",
-        "move back": "back"
+        "stop": "stop",
+        "halt": "stop"
     }
     
     # Check for exact command matches
@@ -162,21 +193,22 @@ def record_and_transcribe():
         
         print("\nReady for voice commands!")
         print("\n=== Session Control ===")
-        print("1. Say 'start session' or 'begin session' to begin controlling the robot")
-        print("2. Say 'end session' or 'stop session' to stop controlling the robot")
+        print("1. Say 'start' to begin controlling the robot")
+        print("2. Say 'end' to stop controlling the robot")
         print("   (Session will automatically end after 2 minutes of inactivity)")
         print("\n=== Movement Commands ===")
         print("(Only work when session is active)")
-        print("- 'forward' or 'go forward' - Move forward")
+        print("- 'go' - Move forward")
         print("- 'stop' or 'halt' - Stop moving")
-        print("- 'turn left' or 'go left' - Turn left")
-        print("- 'turn right' or 'go right' - Turn right")
-        print("- 'go back' or 'backwards' - Move backward")
+        print("- 'turn left' - Turn left")
+        print("- 'turn right' - Turn right")
+        print("- 'back up' - Move backward")
+        print("- 'emergency' - Activate emergency mode with siren")
         print("\nListening... (Press Ctrl+C to exit)")
         
         # Initialize session
         session = RobotSession()
-        print("\n⚠️  No active session. Say 'start session' first!")
+        print("\n⚠️  No active session. Say 'start' first!")
         session.led.waiting()  # Start with blue light (waiting for session)
         
         while True:
