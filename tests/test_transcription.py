@@ -113,7 +113,7 @@ def process_command(text, session):
     if "start" in text:
         session.start()
         return True
-    elif "end" in text:
+    elif any(cmd in text for cmd in ["end", "terminate"]):
         session.end()
         return True
     
@@ -194,7 +194,7 @@ def record_and_transcribe():
         print("\nReady for voice commands!")
         print("\n=== Session Control ===")
         print("1. Say 'start' to begin controlling the robot")
-        print("2. Say 'end' to stop controlling the robot")
+        print("2. Say 'end' or 'terminate' to stop controlling the robot")
         print("   (Session will automatically end after 2 minutes of inactivity)")
         print("\n=== Movement Commands ===")
         print("(Only work when session is active)")
