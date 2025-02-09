@@ -1,8 +1,27 @@
+# Python virtual environment
+.venv/
+venv/
+ENV/
+
 # Python cache files
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+
+# Recordings and photos
+tests/recordings/*.wav
+tests/emergency_photos/*.jpg
+
+# Environment variables
+.env
+
+# IDE files
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
 
 # Generated files
 *.png
@@ -15,7 +34,6 @@ __pycache__/
 
 # Config and environment files
 motor_dir.json
-.env
 
 # Device tree overlay
 pwm-pi5.dtbo

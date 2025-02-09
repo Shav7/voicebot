@@ -12,6 +12,8 @@ from openai import OpenAI
 from lib.led_feedback import LEDFeedback
 import subprocess
 import threading
+import cv2
+import alsaaudio
 
 # OpenAI setup
 client = OpenAI()  # This will use OPENAI_API_KEY environment variable
@@ -87,7 +89,7 @@ def play_siren():
     """Play the police siren sound"""
     siren_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recordings", "police.wav")
     try:
-        subprocess.run(["aplay", "-D", "plughw:2,0", siren_path])
+        subprocess.run(["aplay", "-D", "plughw:4,0", siren_path])
     except Exception as e:
         print(f"Error playing siren: {e}")
 
@@ -97,12 +99,47 @@ def play_siren_loop():
     start_time = time.time()
     duration = 5  # Match LED duration
     
-    while time.time() - start_time < duration:
-        try:
-            subprocess.run(["aplay", "-D", "plughw:2,0", siren_path], check=True)
-        except Exception as e:
-            print(f"Error playing siren: {e}")
-            break
+    try:
+        # Play the siren in a loop for the duration
+        while time.time() - start_time < duration:
+            subprocess.run(["aplay", "-D", "plughw:4,0", siren_path], check=True)
+    except Exception as e:
+        print(f"Error playing siren: {e}")
+
+def capture_emergency_photo():
+    """Capture a photo during emergency"""
+    try:
+        # Initialize camera
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            print("Error: Could not open camera")
+            return
+            
+        # Wait a moment for camera to initialize
+        time.sleep(0.5)
+        
+        # Capture frame
+        ret, frame = cap.read()
+        
+        if not ret:
+            print("Error: Could not capture frame")
+            return
+            
+        # Create timestamp for filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        photo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "emergency_photos")
+        os.makedirs(photo_path, exist_ok=True)
+        
+        # Save the frame
+        filename = os.path.join(photo_path, f"emergency_{timestamp}.jpg")
+        cv2.imwrite(filename, frame)
+        print(f"\n📸 Emergency photo saved: {filename}")
+        
+        # Release the camera
+        cap.release()
+        
+    except Exception as e:
+        print(f"Error capturing emergency photo: {e}")
 
 def process_command(text, session):
     """Process transcribed text for commands"""
@@ -132,6 +169,10 @@ def process_command(text, session):
         # Start siren in a separate thread
         siren_thread = threading.Thread(target=play_siren_loop)
         siren_thread.start()
+        
+        # Capture emergency photo
+        photo_thread = threading.Thread(target=capture_emergency_photo)
+        photo_thread.start()
         
         # Flash LEDs
         session.led.emergency()
